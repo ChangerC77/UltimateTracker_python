@@ -3,6 +3,7 @@ import openvr
 import csv
 import math
 import numpy as np
+#from win_precise_time import sleep
 from time import sleep
 import matplotlib.pyplot as plt
 from collections import deque
@@ -10,6 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # Define the sampling rate (in Hz)
 SAMPLING_RATE = 120 
+# SAMPLING_RATE = 20
 file_name = "ultimate_tracker_data.csv"
 def precise_wait(duration):
     """
@@ -86,18 +88,18 @@ class CSVLogger:
         try:
             self.file = open(filename, 'w', newline='')
             self.csv_writer = csv.writer(self.file)
-            self.csv_writer.writerow(['TrackerIndex', 'Time', 'PositionX', 'PositionY', 'PositionZ', 'RotationW', 'RotationX', 'RotationY', 'RotationZ'])
+            self.csv_writer.writerow(['TrackerIndex','device_type', 'Time', 'PositionX', 'PositionY', 'PositionZ', 'RotationW', 'RotationX', 'RotationY', 'RotationZ'])
         except Exception as e:
             print(f"Failed to initialize CSV file: {e}")
             return False
         return True
 
-    def log_data_csv(self, index, current_time, position):
+    def log_data_csv(self, index,device_type, current_time, position):
         """
         Log tracker data to CSV file.
         """
         try:
-            self.csv_writer.writerow([index, current_time, *position])
+            self.csv_writer.writerow([index,device_type, current_time, *position])
         except Exception as e:
             print(f"Failed to write data to CSV file: {e}")
 
@@ -192,13 +194,13 @@ class LivePlotter:
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
-    def init_3d_plot(self):
+    def init_3d_plot(self,key=0):
         """
         Initialize the 3D live plot for VIVE tracker data.
         """
-        self.fig_3d = plt.figure()
+        self.fig_3d = plt.figure(key)
         self.ax_3d = self.fig_3d.add_subplot(111, projection='3d')
-        self.ax_3d.view_init(elev=1, azim=180, roll=None, vertical_axis='y')
+        self.ax_3d.view_init(elev=1, azim=180)
 
         self.maxlen_3d = 50
         self.x_data_3d = deque(maxlen=self.maxlen_3d)
@@ -224,9 +226,10 @@ class LivePlotter:
         self.x_data_3d.append(x)
         self.y_data_3d.append(y)
         self.z_data_3d.append(z)
-
-        self.line_3d.set_data(self.x_data_3d, self.y_data_3d)
-        self.line_3d.set_3d_properties(self.z_data_3d)
+        xx,yy,zz=self.x_data_3d, self.y_data_3d,self.z_data_3d
+        xx,yy,zz=np.array(list(xx)),np.array(list(yy)),np.array(list(zz))
+        self.line_3d.set_data(xx,yy)
+        self.line_3d.set_3d_properties(zz)
 
         if len(self.x_data_3d) > 1:
             self.ax_3d.set_xlim(min(self.x_data_3d), max(self.x_data_3d))
@@ -238,43 +241,60 @@ class LivePlotter:
 
 def main():
     vr_manager = VRSystemManager()
-    # csv_logger = CSVLogger()  # save data to CSV
-    # plotter = LivePlotter()   # live plotter
+    csv_logger = CSVLogger()
+    plotter = LivePlotter()
+    plotter2 = LivePlotter()
+
 
     # enable or disable plots (for maximum performance disable all plots)
     plot_3d = False # live 3D plot (might affect performance)
     plot_t_xyz = False # live plot of x, y, z positions
-    log_data = True # log data to CSV file 
+    log_data = True # log data to CSV file
     print_data = True # print data to console
 
     if not vr_manager.initialize_vr_system():
         return
 
-    # if not csv_logger.init_csv(file_name):
-    #     return
+    if not csv_logger.init_csv(file_name):
+        return
 
-    # if plot_t_xyz: plotter.init_live_plot()
-    # if plot_3d: plotter.init_3d_plot()
+    if plot_t_xyz: plotter.init_live_plot()
+    if plot_3d: plotter.init_3d_plot('1')
+    if plot_3d: plotter2.init_3d_plot('2')
+
 
     try:
         while True:
             poses = vr_manager.get_tracker_data()
-            for i in range(openvr.k_unMaxTrackedDeviceCount): # 遍历所有tracker设备
+            for i in range(openvr.k_unMaxTrackedDeviceCount):
                 if poses[i].bPoseIsValid:
                     device_class = vr_manager.vr_system.getTrackedDeviceClass(i)
-                    if device_class == openvr.TrackedDeviceClass_GenericTracker:
+                    # if device_class == openvr.TrackedDeviceClass_HMD:
+                    if device_class in [openvr.TrackedDeviceClass_GenericTracker
+                                        ,openvr.TrackedDeviceClass_TrackingReference
+                                        ]:
+                        print('@',i,device_class)
+
                         current_time = time.time()
                         position = DataConverter.convert_to_quaternion(poses[i].mDeviceToAbsoluteTracking)
-                        # if plot_t_xyz: plotter.update_live_plot(position[:3])
-                        # if plot_3d: plotter.update_3d_plot(position[:3])
-                        # if log_data: csv_logger.log_data_csv(i - 1, current_time, position)
-                        if print_data: print(f"Tracker {i - 1}: {position}")
+                        if plot_t_xyz: plotter.update_live_plot(position[:3])
+                        if plot_3d: plotter.update_3d_plot(position[:3])
+
+                        # if plot_3d and i==1: plotter.update_3d_plot(position[:3])
+                        # if plot_3d and i==3: plotter2.update_3d_plot(position[:3])
+                        if log_data: csv_logger.log_data_csv(i - 1,device_class, current_time, position)
+                        if print_data: 
+                            if device_class==openvr.TrackedDeviceClass_GenericTracker:
+                                print(f"Tracker {i - 1}: {position}")
+                            elif device_class==openvr.TrackedDeviceClass_TrackingReference:
+                                print(f"Ref {i - 1}: {position}")
+
             precise_wait(1 / SAMPLING_RATE)
     except KeyboardInterrupt:
         print("Stopping data collection...")
     finally:
         vr_manager.shutdown_vr_system()
-        # csv_logger.close_csv()
+        csv_logger.close_csv()
 
 
 if __name__ == "__main__":

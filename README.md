@@ -1,52 +1,164 @@
-# UltimateTracker_python
+# VIVE Tracker using openvr 
+Directly read orientation and position data from the VIVE Ultimate Tracker using Python.
 
-Directly read orientation and position data from the VIVE Ultimate Tracker using Python. Only available on Windows.
+# 1. Steam
+推荐：`ubuntu 22.04`和`windows`，这里以`Ubuntu 22.04`为例
 
-## Pre-requirements
-- Install Steam VR.
-- Enable the null driver for a virtual headset using this: [SteamVRNoHeadset](https://github.com/username223/SteamVRNoHeadset).
-- Install the VIVE Streaming Hub and activate the PC streaming beta:
-  - Download from: [VIVEStreamingHub](https://www.vive.com/us/vive-hub/download/)
-  - Activate teh PC Beta with code: "VIVEUTRCPreview" (valid as of 08/2024).
-- Follow instructions in the VIVE Streaming Hub. (update: 21.08.2024, Launch of SteamVR no longer necessary but installation and enabling null HMD is still needed)
-- Follow the instructions to create a map. Ignore the last step demanding a SteamVR headset connection.
-- When the trackers indicate ready, launch the code as explained below.
+`ATTENTION`: 在ubuntu 20.04中，无法在后续步骤中打开`steamVR`进行配对(不支持图形化界面),所以在第一次使用时推荐`ubuntu 22.04`或`windows`系统，具体详见`steamVR`部分内容
 
-## VIVE Tracker DirectRead
+## 1. update the software package first
+```
+sudo apt update
+sudo apt upgrade
+```
+## 2. download steam
+<img src='img/1.png'>
 
-### Overview
-**VIVE Tracker DirectRead** is a Python tool to read orientation and position data from the VIVE Ultimate Tracker without a VR headset. It logs data to a CSV file and provides real-time 2D and 3D plotting.
+## 3. install steam
+website: https://store.steampowered.com/about
 
-### Features
-- **Direct Tracker Data Access**: Retrieve orientation and position data of the Ultimate Tracker.
-- **CSV Logging**: Log data for analysis.
-- **Live Plotting**: Real-time 2D and 3D plotting.
+可以在本代码仓中直接找到`steam.deb`文件并进行下载
+```
+sudo dpkg -i steam.deb
+```
+第一次点击`Start Steam`会进入安装终端，此时要分别按大概`3-4`次enter进行安装，安装好后会自动升级系统
 
-### Requirements
-- Python 3.6+
-- Libraries: `openvr`, `numpy`, `matplotlib`, `collections`, `mpl_toolkits.mplot3d`, `win_precise_time`
+<img src='img/2.png'>
+<img src='img/3.png'>
+<img src='img/4.png'>
+<img src='img/5.png'>
 
-## Application
-- run the python code and modify in line 244 to 246 if you want your tracking data to be:
-- a. live plotted in a 3D plot (might impact system performance)
-- b. live plotted in a time/XYZ plot
-- c. saved in a .csv file (file name and path to be defined in line 251)  
+<img src='img/6.png'>
+<img src='img/7.png'>
+<img src='img/8.png'>
+<img src='img/9.png'>
+<img src='img/10.png'>
 
-### Contact
+更新根据网络情况而定，推荐网络有线连接
 
-For any questions or issues, please contact [kulozik[at]isir.upmc.fr].
+## 2. bug
 
-### License
+如果安装时出现下图报错，需要先补充安装curl。
 
-This code is licensed under the MIT License.
+<img src='img/11.png'>
 
-### Attribution
+```
+sudo apt install curl
+```
+启动Steam可能会出下如下报错。
 
-When using this code, please cite the following:
+<img src='img/12.png'>
 
-[Julian Kulozik]. (2024). VIVE Tracker DirectRead. GitHub repository. URL: [https://github.com/jkulozik/UltimateTracker_python]
+在启动`steam`时，请在自动打开的`terminal`中根据指引安装所需的`package`。
 
-Install the required Python libraries:
+# 2. steamVR
+推荐：`ubuntu 22.04`和`windows`，这里以`Ubuntu 22.04`为例
+`ATTENTION`: 在`ubuntu 20.04`中，无法打开`steamVR`进行配对(不支持图形化界面),因此建议在第一次配对时使用`windows`或`ubuntu 22.04` 系统进行配对，而后再切入`ubuntu 20.04`系统进行使用。切入系统使用前仍然需要安装`steamVR`修改`config`文件，因为`openvr`的驱动依赖于`steamvr`,具体修改步骤详见下方内容
 
+## 1. install steamVR
+在仓库中搜索`steamvr`，安装`SteamVR`时也会自动安装 `Linux Runtime 3.0`。 
+<img src='img/13.png'>
+<img src='img/14.png'>
+<img src='img/15.png'>
+<img src='img/16.png'>
+
+this step only occurs in `ubuntu` system
+
+<img src='img/17.png'>
+
+## 2. 连接定位器
+### 第一次连接
+需要按图所示连接
+
+<img src='img/21.png'>
+<img src='img/22.png' width='70%'>
+
+### 后续连接 
+
+按图所示方式连接一次后则不需要，之后直接将蓝牙适配器拔下来插入`PC USB`口即可
+
+<img src='img/23.png' width='70%'>
+<img src='img/24.png' width='70%'>
+
+## 3. modify config
+### enable driver
+```
+sudo vim ~/.steam/steam/steamapps/common/SteamVR/drivers/null/resources/settings/default.vrsettings
+```
+Open the null driver file and replace `"enable": false`, with `"enable": true`,
+```
+{
+    "driver_null": {
+        "enable": true,
+        "loadPriority": -999,
+        "serialNumber": "Null Serial Number",
+        "modelNumber": "Null Model Number",
+        "windowX": 0,
+        "windowY": 0,
+        "windowWidth": 2160,
+        "windowHeight": 1200,
+        "renderWidth": 1512,
+        "renderHeight": 1680,
+        "secondsFromVsyncToPhotons": 0.01111111,
+        "displayFrequency": 90.0
+    }
+}
+```
+### disable VR headset
+```
+sudo vim ~/.steam/steam/steamapps/common/SteamVR/resources/settings/default.vrsettings
+```
+#### Change 
+1. `"requireHmd": true`, to `"requireHmd": false`,
+2. `"forcedDriver": ""`, to `"forcedDriver": "null"`, 
+3. `"activateMultipleDrivers": false`, to `"activateMultipleDrivers": true`,
+
+after installing `steam` and `steamVR`
+
+### start steamVR to pair trackers
+
+启动`steamVR`，`steamVR`可以启动`VIVE`的驱动。确保`VR headset`, 定位器基站和`tracker`都连接
+
+<img src='img/19.png'>
+<img src='img/20.png'>
+
+for **step 5**, you can see in <img src='img/tracker_pair.gif'>
+
+after pair successfully, it will show the picture below
+
+<img src='img/18.png'>
+
+# environment requirement
+## ubuntu
+```sh
+pip install openvr numpy matplotlib collections mpl_toolkits.mplot3d 
+```
+## windows
 ```sh
 pip install openvr numpy matplotlib collections mpl_toolkits.mplot3d win_precise_time
+```
+
+# usage
+### 1. read tracker 6 dof pose information
+```python
+python read.py
+```
+aftern running this program, if you want your tracking data to be:
+- a. output `6 dof pose` to terminal
+- b. live plotted in a `3D` plot (might impact system performance)
+- c. live plotted in a `time/XYZ` plot
+- d. saved in a `.csv` file  
+
+output
+```
+Tracker 0: [-0.05243462324142456, -0.14969228208065033, -1.3739923238754272, 0.6392734003249869, 0.6136829491089955, 0.3124104099660625, -0.3422316009644308] 
+Tracker 0: [-0.0515730194747448, -0.1505933701992035, -1.3816518783569336, 0.6393158619547124, 0.613702487691718, 0.3123262788311258, -0.34219402222760714] 
+Tracker 0: [-0.05071805790066719, -0.15148380398750305, -1.3892226219177246, 0.639357912173423, 0.6137095767419568, 0.3122797935863463, -0.34214521644610874] 
+```
+
+### 2. read 6 dof pose information of two trackers
+```python
+python two_tracker.py
+```
+
+# 仍在完善中...
