@@ -81,7 +81,8 @@ this step only occurs in `ubuntu` system
 <img src='img/24.png' width='70%'>
 
 ## 3. modify config
-### enable driver
+### ubuntu
+#### enable driver
 ```
 sudo vim ~/.steam/steam/steamapps/common/SteamVR/drivers/null/resources/settings/default.vrsettings
 ```
@@ -104,7 +105,7 @@ Open the null driver file and replace `"enable": false`, with `"enable": true`,
     }
 }
 ```
-### disable VR headset
+#### disable VR headset
 ```
 sudo vim ~/.steam/steam/steamapps/common/SteamVR/resources/settings/default.vrsettings
 ```
@@ -114,6 +115,12 @@ sudo vim ~/.steam/steam/steamapps/common/SteamVR/resources/settings/default.vrse
 3. `"activateMultipleDrivers": false`, to `"activateMultipleDrivers": true`,
 
 after installing `steam` and `steamVR`
+
+### windows
+<img src='img/26.png'>
+<img src='img/27.png'>
+
+对比`ubuntu` 路径`steamapps/common/SteamVR/resources/settings/default.vrsettings`打开对应的文件，修改方式和上面`Ubuntu`一样
 
 ### start steamVR to pair trackers
 
@@ -137,11 +144,23 @@ pip install openvr numpy matplotlib collections mpl_toolkits.mplot3d
 ```sh
 pip install openvr numpy matplotlib collections mpl_toolkits.mplot3d win_precise_time
 ```
+# 3. coordinate system
+<img src='img/25.png' >
 
-# usage
+VIVE Tracker (3.0) uses the “Right-handed coordinate system”.
+1. Datum A is set to be the top surface of the ring feature around the 1/4” Screw Nut.
+> 基准面A：围绕 1/4 英寸螺纹螺母的环形特征上表面。
+2. Datum B is set to be the intersection point between the centerline of Standard Camera Mount (1/4” Screw Bolt) and Datum A.
+> 基准点B：标准相机支架（1/4 英寸螺钉）中心线与基准面A的交点。
+3. Datum C is set to be the intersection point between the centerline of Stabilizing Pin Recess and Datum A.
+> 基准点C：稳定销凹槽中心线与基准面A的交点。
+4. The coordinate system is constructed by the Datum frame of Datum A, the line of Datum B and Datum C, and Datum C itself.
+> 该坐标系由基准面A、基准点B与C的连线以及基准点C共同构建而成。
+
+# 4. usage
 ### 1. read tracker 6 dof pose information
 ```python
-python read.py
+python tracker.py
 ```
 aftern running this program, if you want your tracking data to be:
 - a. output `6 dof pose` to terminal
