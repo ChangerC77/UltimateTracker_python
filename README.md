@@ -178,8 +178,9 @@ Tracker 0: [-0.05071805790066719, -0.15148380398750305, -1.3892226219177246, 0.6
 ```
 python tracker_calib.py
 ```
-启动之后，选定X和Z轴的方向，先沿着X轴方向做往返运动，而后根据程序输出再切回Y轴方向做往返运动
-after executing this step, the program will save ``*npz`` file as a result of calibration
+启动之后，先沿着Z轴做往复运动，再沿着X轴做往复运动, ``注意``: 运动方向一定要和机械臂坐标系一致
+
+after executing this step, the program will save ``calibration.npz`` file as a result of calibration
 ### 2. read 6 dof pose information of two trackers
 ```python
 python two_tracker.py
