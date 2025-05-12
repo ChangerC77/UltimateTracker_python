@@ -1,3 +1,7 @@
+"""
+calibrate the coordinate of tracker
+"""
+
 import time
 import openvr
 import csv
@@ -6,12 +10,12 @@ import numpy as np
 from time import sleep
 import matplotlib.pyplot as plt
 from collections import deque
-from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
+from calibration import get_pose_from_df, get_transform_PCA, read_poses_from_csv
 
 # Define the sampling rate (in Hz)
 SAMPLING_RATE = 120 
-file_name = "ultimate_tracker_data.csv"
+# file_name = "ultimate_tracker_data.csv"
 
 
 def quaternion2euler(quaternion):
@@ -259,10 +263,10 @@ class LivePlotter:
 def main():
     # Get user preferences
     print("This is a program to read data from VIVE trackers.")
-    print_data = get_user_input("Print data to terminal? (y/n): ")
-    save_csv = get_user_input("Save data to CSV file? (y/n): ")
-    show_3d_plot = get_user_input("Show 3D plot? (y/n): ")
-    show_xyz_plot = get_user_input("Show X/Y/Z plots? (y/n): ")
+    print_data =True #get_user_input("Print data to terminal? (y/n): ")
+    save_csv = True #get_user_input("Save data to CSV file? (y/n): ")
+    show_3d_plot =False #get_user_input("Show 3D plot? (y/n): ")
+    show_xyz_plot =False# get_user_input("Show X/Y/Z plots? (y/n): ")
 
 
     # Initialize components based on user preferences
@@ -273,45 +277,77 @@ def main():
     if not vr_manager.initialize_vr_system():
         return
 
-    if save_csv and not csv_logger.init_csv(file_name):
-        return
+
 
     if plotter:
         if show_xyz_plot: 
             plotter.init_live_plot()
         if show_3d_plot: 
             plotter.init_3d_plot()
+            
+    def do_sample(file_name):
+        print(csv_logger.init_csv(file_name))
+        if save_csv and not csv_logger.init_csv(file_name):
+            return
+        print('1')
+        vr_manager.get_tracker_data()
+        print('2')
 
-    # try:
-    if True:
-        while True:
-            poses = vr_manager.get_tracker_data()
-            for i in range(openvr.k_unMaxTrackedDeviceCount):
-                if poses[i].bPoseIsValid:
-                    device_class = vr_manager.vr_system.getTrackedDeviceClass(i)
-                    if device_class == openvr.TrackedDeviceClass_GenericTracker:
-                        current_time = time.time()
-                        position = DataConverter.convert_to_quaternion(poses[i].mDeviceToAbsoluteTracking) # [x, y, z, r_w, r_x, r_y, r_z]
-           
-                        if plotter:
-                            if show_xyz_plot: 
-                                plotter.update_live_plot(position[:3])
-                            if show_3d_plot: 
-                                plotter.update_3d_plot(position[:3])
-                        
-                        if save_csv: 
-                            csv_logger.log_data_csv(i - 1, current_time, position)
-                        
-                        if print_data: 
-                            print(f"Tracker {i - 1}: {position}")
-            precise_wait(1 / SAMPLING_RATE)
-            return position
-    # except KeyboardInterrupt:
-    #     print("\nStopping data collection...")
-    # finally:
-    #     vr_manager.shutdown_vr_system()
-    #     if save_csv: 
-    #         csv_logger.close_csv()
+        start_time = time.time()
+        try:
+            # while True:
+            while time.time() - start_time < 10:
+                poses = vr_manager.get_tracker_data()
+                for i in range(openvr.k_unMaxTrackedDeviceCount):
+                    if poses[i].bPoseIsValid:
+                        device_class = vr_manager.vr_system.getTrackedDeviceClass(i)
+                        if device_class == openvr.TrackedDeviceClass_GenericTracker:
+                            current_time = time.time()
+                            position = DataConverter.convert_to_quaternion(poses[i].mDeviceToAbsoluteTracking) # [x, y, z, r_w, r_x, r_y, r_z]
+            
+                            if plotter:
+                                if show_xyz_plot: 
+                                    plotter.update_live_plot(position[:3])
+                                if show_3d_plot: 
+                                    plotter.update_3d_plot(position[:3])
+                            
+                            if save_csv: 
+                                csv_logger.log_data_csv(i - 1, current_time, position)
+                            
+                            if print_data: 
+                                print(f"Tracker {i - 1}: {position}")
+                precise_wait(1 / SAMPLING_RATE)
+                # return position
+        except KeyboardInterrupt:
+            print("\nStopping data collection...")
+        finally:
+            if save_csv: 
+                csv_logger.close_csv()
+
+    input('请将tracker沿着Z轴方向来回移动直到采集程序结束,点击回车开始采集数据')
+    do_sample('tracker_data_Z.csv')
+    print('采集结束')
+    input('请将tracker沿着X轴方向来回移动直到采集程序结束,点击回车开始采集数据')
+    do_sample('tracker_data_X.csv')
+    print('采集结束')
+
+    vr_manager.shutdown_vr_system()
+
+    csv_path = "tracker_data_X.csv"
+    poses_x = get_pose_from_df(read_poses_from_csv(csv_path))
+    csv_path = "tracker_data_Z.csv"
+    poses_z = get_pose_from_df(read_poses_from_csv(csv_path))
+    pose_0 = poses_x[0]
+    poses_all = np.concatenate([poses_x, poses_z], axis=0)
+    transform_PCA = get_transform_PCA(pose_0, poses_x, poses_z)
+    np.savez("calibration.npz",pose_0=pose_0,transform=transform_PCA)
+
+    print('标定结束')
+
+
+
+    
+       
 
 if __name__ == "__main__":
     main()
